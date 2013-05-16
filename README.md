@@ -6,5 +6,9 @@ Businesses can rely on Instant Servers as an enterprise-grade platform to delive
 Install
 -------
 
+<pre>
 cd instantservers-api-client
 mvn compile 
+</pre>
+
+Note: make it available as a maven artifact is already reported as an open issue.
