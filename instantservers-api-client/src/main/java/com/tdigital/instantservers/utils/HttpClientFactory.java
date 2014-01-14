@@ -36,7 +36,9 @@ public class HttpClientFactory {
 
     private static final int DEFAULT_MAX_CONNECTIONS = 200;
 
-    private static final int DEFAULT_TIMEOUT = 20000;
+    // Maximum time waited for the server to response, in an opened connection
+    private static final int DEFAULT_TIMEOUT = 30000;
+    // Maximum time waited for opening a new connection
     private static final int DEFAULT_CONNECTION_TIMEOUT = 10000;
 
     private static final TrustManager TRUST_MANAGER = new AcceptAllTrustManager();

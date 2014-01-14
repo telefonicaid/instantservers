@@ -28,6 +28,7 @@ import com.tdigital.instantservers.model.management.VirtualMachine;
 import com.tdigital.instantservers.model.management.Zone;
 import com.tdigital.instantservers.model.management.ZoneSnapshot;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -111,13 +112,55 @@ public class ManagementAPIClient extends BaseAPIClient {
      * The maximum allowable result set size is 1000
      */
     public Zone[] listZones() throws InstantServersApiException {
-        Zone[] list = get("/zones", Zone[].class).getValue();
-        return list == null ? new Zone[0] : list;
+        return paginatedList("/zones", Zone.class, Zone[].class);
     }
 
     public Zone[] listZones(String customerUUID) throws InstantServersApiException {
-        Zone[] list = get("/zones?owner_uuid={value}", Zone[].class, customerUUID).getValue();
-        return list == null ? new Zone[0] : list;
+        return paginatedList("/zones?owner_uuid={customer}", Zone.class, Zone[].class, customerUUID);
+    }
+
+    protected <K extends Zone> K[] paginatedList(String path,
+                                                   Class<K> resultClass,
+                                                   Class<K[]> resultClassArray,
+                                                   String... params) throws InstantServersApiException {
+        final int LIMIT = 1000;
+        int totalCount = 0;
+        int requestOffset = 0;
+
+        K[] partialList;
+        List<K[]> pages = new ArrayList<K[]>();
+
+        String modifiedPath = path + (path.contains("?") ? "&" : "?") + "limit={limit}&offset={offset}";
+        String[] modifiedParams = new String[params.length + 2];
+        System.arraycopy(params, 0, modifiedParams, 0, params.length);
+        modifiedParams[params.length] = Integer.toString(LIMIT);
+
+        // Get every page
+        do {
+            modifiedParams[params.length + 1] = Integer.toString(requestOffset);
+            partialList = get(modifiedPath,
+                    resultClassArray,
+                    modifiedParams
+            ).getValue();
+            requestOffset += LIMIT;
+            if (partialList != null) {
+                pages.add(partialList);
+                totalCount += partialList.length;
+            }
+        } while (partialList != null && partialList.length == 1000);
+
+        if (totalCount == 0) {
+            return (K[]) Array.newInstance(resultClass, 0);
+        } else {
+            // Join results
+            K[] joinedList = (K[]) Array.newInstance(resultClass, totalCount);
+            int arrayOffset = 0;
+            for (Zone[] page : pages) {
+                System.arraycopy(page, 0, joinedList, arrayOffset, page.length);
+                arrayOffset += page.length;
+            }
+            return joinedList;
+        }
     }
 
     public Zone[] searchZones(String filterKey, String filterValue) throws InstantServersApiException {
@@ -276,13 +319,11 @@ public class ManagementAPIClient extends BaseAPIClient {
      * The maximum allowable result set size is 1000
      */
     public VirtualMachine[] listVirtualMachines() throws InstantServersApiException {
-        VirtualMachine[] list = get("/vms", VirtualMachine[].class).getValue();
-        return list == null ? new VirtualMachine[0] : list;
+        return paginatedList("/vms", VirtualMachine.class, VirtualMachine[].class);
     }
 
     public VirtualMachine[] listVirtualMachines(String customerUUID) throws InstantServersApiException {
-        VirtualMachine[] list = get("/vms?owner_uuid={value}", VirtualMachine[].class, customerUUID).getValue();
-        return list == null ? new VirtualMachine[0] : list;
+        return paginatedList("/vms?owner_uuid={customer}", VirtualMachine.class, VirtualMachine[].class, customerUUID);
     }
 
     public VirtualMachine getVirtualMachine(String id) throws InstantServersApiException {
